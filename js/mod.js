@@ -2,7 +2,7 @@ let modInfo = {
 	name: "Tree of Tokens",
 	author: "treeenjoyer",
 	pointsName: "points",
-	modFiles: ["layers.js", "tree.js", "ach.js"],
+	modFiles: ["layers.js", "tree.js", "ach.js", "layers2.js", "bokens.js", "euros.js"],
 
 	discordName: "EXC Discord",
 	discordLink: "https://discord.gg/9ZjwG5PGTU",
@@ -12,20 +12,39 @@ let modInfo = {
 
 // Set your version in num and name
 let VERSION = {
-	num: "1.0",
-	name: "tONEken",
+	num: "1.1",
+	name: "Tediousless Update",
 }
 
 let changelog = `<h1>Changelog:</h1><br>
 	<h3>v1.0 [tONEken]</h3><br>
-		- Added Token Layer<br>
+		+ Added Token Layer<br>
 		[Level, XP, Points, Pointy Tokens, Speedy Tokens, Longer Tokens, Proficient Tokens, Cooldown, Lifetime, Tokens] <br>
-		- Added Ability Token Layer<br>
+		+ Added Ability Token Layer<br>
 		[Gravity Token, Durable Token, Collector Token, Speedy Token, Xenon Token, Mysterious Token]<br>
-		- Added Golden Token Layer<br>
+		+ Added Golden Token Layer<br>
 		[Shining Brightly, Token Mint, Golden Abilities]<br>
-		- Added Achievements Layer<br>
-		[18 achievements added]`
+		+ Added Achievements Layer<br>
+		[18 achievements added]<br>
+	<br>
+	<h3>v1.1 [Tediousless Update]</h3><br>
+		+ Added point mult based on levels<br>
+		+ Added Automated Tokens and Auto-Speedy Tokens buyables in Token Layer<br>
+		+ Added Golden Token Buyables [Gilded Points, Gilded XP]<br>
+		+ Added Statistics<br>
+		+ Added Dollar Layer<br>
+		+ Added 2 new ability tokens [Bomb, Robot]<br>
+		+ Added Token Mastery<br>
+		+ Added Bokens<br>
+		+ Added Euros (unfinished)<br>
+		+ Added an option button to fix game not running in BG (IT'S IN OPTIONS, RESETS EVERYTIME YOU LOAD)<br>
+		+ Added auto collect toggle in options<br>
+		/ Fixed Collector Token trying to collect cosmetic particles<br>
+		/ Made Collector Token collect effect vfx kinda better<br>
+		^ Buffed Durable Token to x5 XP & Points<br>
+		^ Buffed Gravity Token to x3 XP & Points<br>
+		^ Bumped endgame to 1 euro<br>
+		⌄ Nerfed Xenon Token to x1 XP & Points<br>`
 
 let winText = `GG You beat Tree of Tokens. It's the endgame for now and there might be more content soon but check out my other trees..`
 
@@ -58,12 +77,12 @@ function addedPlayerData() { return {
 // Display extra things at the top of the page
 var displayThings = [
 	"Click on the tokens to earn points!",
-	"Endgame: 30 Golden Tokens"
+	"Endgame: 10 Euros"
 ]
 
 // Determines when the game "ends"
 function isEndgame() {
-	return player.gt.points.gte(30)
+	return player.e.points.gte(10)
 }
 
 

@@ -108,9 +108,7 @@ function tokenId(id) {
 	if(id==8)return "Robot"
 }
 //Spawn a token
-function tokenSpawn(type, tokenfrom) {
-	let tokentype
-	let manualspawn = false
+function tokenSpawn(type) {
     //get ability Tokens
     let abtokensequip = []
     for (at in player.a.grid) {
@@ -120,16 +118,7 @@ function tokenSpawn(type, tokenfrom) {
     }
     // basic or ability token
     if (Math.round(Math.random()) == 0 && abtokensequip.length >= 1) {
-		if(hasMilestone("d",7)){
-			tokentype = abtokensequip[0]
-			if(!type){
-				for (let i = 0; i < abtokensequip.length - 1; i++) {
-					tokenSpawn(abtokensequip[i+1])
-				}
-			}
-		} else {
-			tokentype = abtokensequip[Math.floor(Math.random() * abtokensequip.length)]
-		}
+        tokentype = abtokensequip[Math.floor(Math.random() * abtokensequip.length)]
     } else {
         tokentype = "Basic"
     }
@@ -146,13 +135,8 @@ function tokenSpawn(type, tokenfrom) {
 			tokentype = type
 		}
 	}
-	if(tokenfrom){
-		manualspawn = true
-	}
     let token = {
-		manualSpawn: manualspawn,
 		isToken: true,
-		bombactive: true,
         thing: tokentype,
         image: "resources/" + tokentype + ".png",
         time: player.t.lifetime,
@@ -177,9 +161,7 @@ function tokenSpawn(type, tokenfrom) {
         },
         hp() {
             if (tokentype == "Durable") {
-				if(hasAchievement("tm", 22)) return 3
-				if(hasAchievement("tm", 21)) return 4
-				return 5
+                return 5
             } else {
                 return 1
             }
@@ -215,8 +197,6 @@ function tokenSpawn(type, tokenfrom) {
                 //add
                 player.points = player.points.plus(pointmult)
                 player.t.points = player.t.points.plus(xpmult)
-				//mastery progress
-				if(player.tm.unlocked2 && parti.thing != "Basic" && parti.thing != "Golden" && parti.manualSpawn == false) player.tm[parti.thing.toLowerCase()+"prog"] = player.tm[parti.thing.toLowerCase()+"prog"].plus(1)
                 //Token Effect Applier
                 if (parti.thing == "Golden") {
                     if (Math.round(Math.random()) == 0) {
@@ -225,24 +205,11 @@ function tokenSpawn(type, tokenfrom) {
                         player.t.triplexpeff = new Decimal(15)
                     }
                 }
-                if (parti.thing == "Speedy"){
-					player.t.accelerationeff = new Decimal(1)
-					if(hasAchievement("tm", 41)) player.t.accelerationeff = new Decimal(2)
-					if(hasAchievement("tm", 42)) player.t.accelerationeff = new Decimal(3)
-				}
-				if (parti.thing == "Robot"){
-					player.t.overclockedeff = new Decimal(3)
-					if(hasAchievement("tm", 81)) player.t.overclockedeff = new Decimal(4)
-					if(hasAchievement("tm", 82)) player.t.overclockedeff = new Decimal(5)
-				}
+                if (parti.thing == "Speedy") player.t.accelerationeff = new Decimal(1)
+				if (parti.thing == "Robot") player.t.overclockedeff = new Decimal(2)
                 if (parti.thing == "Mysterious") {
                     player.t.mysteriouseff = new Decimal(format(Math.random() * 4)).plus(1)
                     player.t.mysteriouseffmult = new Decimal(format(Math.random() * 2)).plus(1)
-					let mult = new Decimal(1)
-					if(hasAchievement("tm", 61)) mult = new Decimal(2)
-					if(hasAchievement("tm", 62)) mult = new Decimal(4)
-					player.t.mysteriouseff = player.t.mysteriouseff.times(mult)
-					player.t.mysteriouseffmult = player.t.mysteriouseffmult.times(mult)
                 }
                 //Xenon Token Spawn
                 if (parti.thing == "Xenon") {
@@ -253,18 +220,11 @@ function tokenSpawn(type, tokenfrom) {
                     })
                     //now we get a random one and spawn that
                     player.t.xenontype = xenonunlock[Math.floor(Math.random() * xenonunlock.length)]
-                    tokenSpawn(player.t.xenontype, "Xenon")
+                    tokenSpawn(player.t.xenontype)
                 }
                 //Collector Token collect
                 if (parti.thing == "Collector") {
-					// Filter out non tokens
-					Object.filter = (obj, predicate) => Object.fromEntries(Object.entries(obj).filter(predicate))
-					let filtered = Object.filter(particles, ([id, data]) => data.isToken) // only tokens
-					let filtered2 = Object.filter(filtered, ([id, data]) => data.thing != "Collector") // not collectors
-					let realtimes = 2
-					if(hasAchievement("tm", 31)) realtimes = 3
-					if(hasAchievement("tm", 32)) realtimes = 4
-                    let times = Math.min(realtimes, Object.keys(filtered2).length)
+                    let times = Math.min(2, Object.keys(particles).length - 1)
                     //WAIT, are there only Collectors on the field?
                     let x = false
                     for (p in particles) {
@@ -272,45 +232,38 @@ function tokenSpawn(type, tokenfrom) {
                     }
                     if (!x) times = 0
                     for (let i = 0; i < times; i++) {
-						collectRandomCollector()
+                        //select random token then click it manually
+                        let randomProperty = function(obj) {
+                            let keys = Object.keys(obj)
+                            return obj[keys[keys.length * Math.random() << 0]]
+                        }
+                        let selected = randomProperty(particles)
+                        //explosion effect
+                        if (id != selected.id && selected.thing != "Collector") {
+                            let explode = {
+								isToken: false,
+                                image: "resources/genericParticle.png",
+                                time: 1,
+                                fadeOutTime: 1,
+                                speed: 0,
+                                offset: 0,
+                                width: 10,
+                                height: 10,
+                                x: selected.x,
+                                y: selected.y,
+                                update() {
+                                    particles[this.id].width += 20
+                                    particles[this.id].height += 20
+                                }
+                            }
+                            makeParticles(explode, 1)
+                            run(selected.onClick, selected)
+                        } else {
+                            i--
+                            continue
+                        }
                     }
                 }
-				//Bomb Token Spawn
-				if (parti.thing == "Bomb") {
-					//active bomb?
-					if(parti.bombactive){
-						let times = 2
-						if(hasAchievement("tm", 71)) times = 4
-						if(hasAchievement("tm", 72)) times = 6
-						for(let i = 0; i < times; i++){
-							let bomb = tokenSpawn("Bomb", "Bomb")
-							bomb.bombactive = false
-							bomb.x = parti.x + ((Math.random() * 2 - 1) * 100)
-							bomb.y = parti.y + ((Math.random() * 2 - 1) * 100)
-						}
-						let explode = {
-							isToken: false,
-							image: "resources/bombeffect.png",
-							time: 1,
-							fadeOutTime: 1,
-							speed: 0,
-							offset: 0,
-							width: 10,
-							height: 10,
-							x: parti.x,
-							y: parti.y,
-							ease: 100,
-							rotation: 10,
-							//color: "#ff4a4a",
-							update() {
-								particles[this.id].ease -= 6
-								particles[this.id].width += particles[this.id].ease
-								particles[this.id].height += particles[this.id].ease
-							}
-						}
-						makeParticles(explode, 1)
-					}
-				}
             }
             // custom hp
             if (particles[this.id].hp >= 2) {
@@ -325,87 +278,19 @@ function tokenSpawn(type, tokenfrom) {
         },
     }
     makeShinies(token)
-	return particles[particleID]
 }
 //Get base mult of tokens by name
 function tokenMult(name) {
-	if(name=="Xenon"){
-		if(hasAchievement("tm", 52)) return 6
-		if(hasAchievement("tm", 51)) return 3
-		return 1
-	}
-	if(name=="Gravity"){
-		if(hasAchievement("tm", 12)) return 10
-		if(hasAchievement("tm", 11)) return 5
-		return 3
-	}
-	if(name=="Collector"||name=="Speedy"||name=="Mysterious"||name=="Bomb"||name=="Robot") return 2
-	if(name=="Durable"){
-		if(hasAchievement("tm", 22)) return 20
-		if(hasAchievement("tm", 21)) return 10
-		return 5
-	}
+	if(name=="Xenon") return 1
+	if(name=="Gravity"||name=="Collector"||name=="Speedy"||name=="Mysterious"||name=="Bomb"||name=="Robot") return 2
+	if(name=="Durable") return 5
 }
-
-//collect random token but for Collector
-function collectRandomCollector() {
-	let randomKey = function (obj){
-		let keys = Object.keys(obj)
-		return keys[Math.floor(Math.random() * keys.length)]
-	}
-	// Filter out non tokens
-	Object.filter = (obj, predicate) => Object.fromEntries(Object.entries(obj).filter(predicate))
-	let filtered = Object.filter(particles, ([id, data]) => data.isToken) // only tokens
-	let filtered2 = Object.filter(filtered, ([id, data]) => data.thing != "Collector") // not collectors
-	let tokenchosen = randomKey(filtered2)
-	let explode = {
-		isToken: false,
-        image: "resources/genericParticle.png",
-        time: 1,
-        fadeOutTime: 1,
-        speed: 0,
-        offset: 0,
-        width: 10,
-        height: 10,
-        x: particles[tokenchosen].x,
-        y: particles[tokenchosen].y,
-		ease: 50,
-        update() {
-			particles[this.id].ease -= 3
-            particles[this.id].width += particles[this.id].ease
-            particles[this.id].height += particles[this.id].ease
-        }
-    }
-	makeParticles(explode, 1)
-	//butterfly effect ach
-	if(particles[tokenchosen].thing == "Bomb" && particles[tokenchosen].bombactive) player.t.ach57 = true
-	// dont do if it dont exist
-	if(particles[tokenchosen] !== undefined){
-		run(particles[tokenchosen].onClick, particles[tokenchosen])
-	} else {
-		console.log("does not exist")
-	}
-}
-
 //Collect a random token on the field
 function collectRandom(){
 	let randomKey = function (obj){
 		let keys = Object.keys(obj)
 		return keys[Math.floor(Math.random() * keys.length)]
 	}
-	// Filter out non tokens
-	Object.filter = (obj, predicate) => Object.fromEntries(Object.entries(obj).filter(predicate))
-	let filtered = Object.filter(particles, ([id, data]) => data.isToken)
-	let tokenchosen = randomKey(filtered)
-	// dont do it if it dont exist
-	if(particles[tokenchosen] !== undefined){
-		run(particles[tokenchosen].onClick, particles[tokenchosen])
-	} else {
-		console.log("does not exist")
-	}
+	let tokenchosen = randomKey(particles)
+	run(particles[tokenchosen].onClick, particles[tokenchosen])
 }
-
-function fixrunbg() {
-	options.fixbg = false
-}
-setTimeout(fixrunbg, 1000)

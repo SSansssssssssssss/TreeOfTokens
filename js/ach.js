@@ -140,6 +140,168 @@ addLayer("ach", {
 			done() {return player.gt.points.gte(30)},
 			image: "resources/ach18.png",
 		},
+		41: {
+			name: "market crash",
+			tooltip: "have 100 golden tokens (unlocks golden token buyables)",
+			done() {return player.gt.points.gte(100)},
+			image: "resources/ach19.png",
+			style: {"border-color": "red"},
+		},
+		42: {
+			name: "WOOOOOOOO-",
+			tooltip: "level up 2 times in a row",
+			done() {return player.t.levelstreak.gte(2)},
+			image: "resources/ach20.png",
+		},
+		43: {
+			name: "M100",
+			tooltip: "have 100,000,000 (100M) points (unlocks new layer)",
+			done() {return player.points.gte("1e8")},
+			image: "resources/ach21.png",
+			style: {"border-color": "red"},
+		},
+		44: {
+			name: "skilled enough",
+			tooltip: "reset for a dollar",
+			done() {return player.d.points.gte(1)},
+			image: "resources/ach22.png",
+		},
+		45: {
+			name: "you broke it",
+			tooltip: "collect 10,000 tokens",
+			done() {return player.ach.points.gte(10000)},
+			image: "resources/ach23.png",
+		},
+		46: {
+			name: "zero to hero",
+			tooltip: "level up 10 times in a row",
+			done() {return player.t.levelstreak.gte(10)},
+			image: "resources/ach24.png",
+		},
+		51: {
+			name: "into a brick wall",
+			tooltip: "get to level 1000",
+			done() {return player.t.level.gte(1000)},
+			image: "resources/ach25.png",
+		},
+		52: {
+			name: "e=mc raised to 100",
+			tooltip: "level up 100 times in a row",
+			done() {return player.t.levelstreak.gte(100)},
+			image: "resources/ach26.png",
+		},
+		53: {
+			name: "cold, hard cash",
+			tooltip: "have 10 dollars",
+			done() {return player.d.points.gte(10)},
+			image: "resources/ach27.png",
+		},
+		54: {
+			name: "one giant leap",
+			tooltip: "level up 1,000 times in a row",
+			done() {return player.t.levelstreak.gte(100)},
+			image: "resources/ach28.png",
+		},
+		55: {
+			name: "king token",
+			tooltip: "master a token once",
+			done() {return player.tm.totalpoints.gte(1)},
+			image: "resources/ach29.png",
+		},
+		56: {
+			name: "have mercy",
+			tooltip: "master durable token once",
+			done() {return player.tm.durabletier.gte(1)},
+			image: "resources/ach30.png",
+		},
+		61: {
+			name: "butterfly effect",
+			tooltip: "have a collector token collect an active bomb token",
+			done() {return player.t.ach57},
+			image: "resources/ach31.png",
+		},
+		62: {
+			name: "you're a token",
+			tooltip: "have a total of 16 mastery points (unlocks TM buyables)",
+			done() {return player.tm.totalpoints.gte(16)},
+			image: "resources/ach32.png",
+			style: {"border-color": "red"},
+		},
+		63: {
+			name: "the clock strikes 11",
+			tooltip: "have 11 dollars",
+			done() {return player.d.points.gte(11)},
+			image: "resources/ach33.png",
+		},
+		64: {
+			name: "mass protest",
+			tooltip: "collect 50,000 tokens",
+			done() {return player.ach.points.gte(50000)},
+			image: "resources/ach34.png",
+		},
+		65: {
+			name: "bc donalds",
+			tooltip: "have 1e10 bokens",
+			done() {return player.b.points.gte("1e10")},
+			image: "resources/ach35.png",
+		},
+		66: {
+			name: "level the 13th",
+			tooltip: "get to level 1300 (unlocks euros)",
+			done() {return player.t.level.gte(1300)},
+			image: "resources/ach36.png",
+			style: {"border-color": "red"},
+		},
+	},
+    row: "side", // Row the layer is in on the tree (0 is the first row)
+	tabFormat: [
+		"main-display",
+		["display-text", "Red bordered achievements unlock something permanently!"],
+		"achievements"
+	],
+    layerShown(){return true}
+}),
+addLayer("stat", {
+    name: "statistics", // This is optional, only used in a few places, If absent it just uses the layer id.
+    symbol: "ST", // This appears on the layer's node. Default is the id with the first letter capitalized
+    position: 1, // Horizontal position within a row. By default it uses the layer id and sorts in alphabetical order
+    startData() { return {
+        unlocked: true,
+    }},
+	tooltip: "Statistics",
+    color: "#8a8a8a",
+    type: "none", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
+	infoboxes: {
+		t: {
+			title: "Statistics",
+			body() { let x = `
+				<h3 style='color: #e8d41e'>Token Layer</h3><br>
+				Point Mult: `+format(tmp.t.gainPoints)+`x<br>
+				<span style='color: #03b1fc'>XP</span> Mult: `+format(tmp.t.gainXP)+`x<br>
+				Token Cooldown: `+format(player.t.startcd)+`s<br>
+				Token Lifetime: `+format(player.t.lifetime)+`s<br>
+				Auto-Collect: `+formatWhole(player.t.acamt)+`/`+format(player.t.startaccd)+`s<br>
+				Highest Level Streak: `+formatWhole(player.t.hls)+` levels at once<br>
+				`
+				if(player.gt.unlocked){x=x+`<br>
+				<h3 style='color: #ff8c00'>Golden Token Layer</h3><br>
+				Golden Token Mult: `+format(tmp.gt.gainMult)+`x<br>
+				`}
+				if(player.tm.unlocked2){x=x+`<br>
+				<h3 style='color: #f54242'>Token Mastery Layer</h3><br>
+				Mastery XP Mult: `+format(tmp.tm.gainMult)+`x<br>
+				Total Mastery Points: `+format(player.tm.totalpoints)+`<br>
+				`}
+				if(player.b.unlocked2){x=x+`<br>
+				<h3 style='color: #FFFFFF'>Boken Layer</h3><br>
+				Boken Mult: `+format(tmp.b.gainMult)+`x<br>
+				Boken Gain: `+format(tmp.b.gainFinal)+`/s<br>
+				Bar Decay: `+format(player.b.decayspeed.times(100))+`%/s<br>
+				Bar Decay Division: /`+format(tmp.b.decayDiv)+`<br>
+				`}
+				return x
+			},
+		},
 	},
     row: "side", // Row the layer is in on the tree (0 is the first row)
     layerShown(){return true}

@@ -325,15 +325,30 @@ function autobuyUpgrades(layer){
 }
 
 function gameLoop(diff) {
-	/*if (isEndgame() || tmp.gameEnded){
+	//The options thingy
+	switch(options['tokenCap']){
+		case 25:
+			document.body.style.setProperty('--color2', '#72ff6e')
+			break
+		case 50:
+			document.body.style.setProperty('--color2', '#fff86e')
+			break
+		case 100:
+			document.body.style.setProperty('--color2', '#ffc56e')
+			break
+		case 200:
+			document.body.style.setProperty('--color2', '#ff6e6e')
+	}
+	
+	if (isEndgame() || tmp.gameEnded){
 		tmp.gameEnded = true
-		clearParticles()
-	}*/
+		//clearParticles()
+	}
 
 	if (isNaN(diff) || diff < 0) diff = 0
 	if (tmp.gameEnded && !player.keepGoing) {
 		diff = 0
-		//player.tab = "tmp.gameEnded"
+		player.tab = "tmp.gameEnded"
 		//clearParticles()
 	}
 

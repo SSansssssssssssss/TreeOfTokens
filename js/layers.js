@@ -14,9 +14,21 @@ addLayer("t", {
 		accelerationeff: new Decimal(0),
 		mysteriouseff: new Decimal(0),
 		mysteriouseffmult: new Decimal(0),
+		overclockedeff: new Decimal(0),
 		xenontype: 0,
 		xenonspawn: false,
 		xenoncd: new Decimal(0),
+		acamt: new Decimal(0),
+		accd: new Decimal(0),
+		startaccd: new Decimal(4),
+		levelstreak: new Decimal(0),
+		lstimer: 10,
+		hls: new Decimal(0), //Highest Level Streak
+		autobuybuyable: true, //should we auto buy buyables
+		asyn: false, // something
+		xpreq: new Decimal(5),
+		ach57: false,
+		levelboost: new Decimal(1),
     }},
 	color: "#e8d41e",
     requires: new Decimal(10), // Can be a function that takes requirement increases into account
@@ -25,13 +37,45 @@ addLayer("t", {
     baseAmount() {return player.points}, // Get the current amount of baseResource
     type: "none", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
     exponent: 0.5, // Prestige currency exponent
-    gainMult() { // Calculate the multiplier for main currency from bonuses
-        mult = new Decimal(1)
-        return mult
+    gainMult() { // Calculate the multiplier for points currency from bonuses
+		return new Decimal(1)
     },
     gainExp() { // Calculate the exponent on main currency from bonuses
         return new Decimal(1)
     },
+	gainPoints() { // POINTS MULTI
+		//Point multiplier
+        let pointmult = new Decimal(1)
+        pointmult = pointmult.times(player.t.levelboost)
+        if (getBuyableAmount("t", 11).gte(1)) pointmult = pointmult.times(buyableEffect("t", 11))
+		if (hasUpgrade("gt", 13)) pointmult = pointmult.times(2)
+		if (getBuyableAmount("gt", 11).gte(1)) pointmult = pointmult.times(buyableEffect("gt", 11))
+		if(hasMilestone("d",0))pointmult=pointmult.times(3)
+		if(hasMilestone("d",0))pointmult=pointmult.times(player.d.points.plus(1))
+		if(hasMilestone("d",3))pointmult=pointmult.times(2)
+		if(hasMilestone("d",7))pointmult=pointmult.times(5)
+		if(hasMilestone("d",8))pointmult=pointmult.times(10)
+		if(getBuyableAmount("b", 13).gte(1)) pointmult = pointmult.times(buyableEffect("b", 13))
+        //Effects
+        if (player.t.tripletokeneff.gt(0)) pointmult = pointmult.times(3)
+        if (player.t.mysteriouseff.gt(0)) pointmult = pointmult.times(player.t.mysteriouseffmult)
+		return pointmult
+	},
+	gainXP() { // XP MULTI
+		//XP multiplier
+        let xpmult = new Decimal(1)
+        if (getBuyableAmount("t", 21).gte(1)) xpmult = xpmult.times(buyableEffect("t", 21))
+        if (hasUpgrade("gt", 13)) xpmult = xpmult.times(2)
+		if (getBuyableAmount("gt", 12).gte(1)) xpmult = xpmult.times(buyableEffect("gt", 12))
+		if(hasMilestone("d",1))xpmult=xpmult.times(player.d.points.plus(1))
+		if(hasMilestone("d",7))xpmult=xpmult.times(5)
+		if (getBuyableAmount("tm", 11).gte(1)) xpmult = xpmult.times(buyableEffect("tm", 11))
+		if(getBuyableAmount("b", 21).gte(1)) xpmult = xpmult.times(buyableEffect("b", 21))
+        //Effects
+        if (player.t.triplexpeff.gt(0)) xpmult = xpmult.times(3)
+		if(hasMilestone("d",4)) xpmult=xpmult.times(2)
+        return xpmult
+	},
     row: 0, // Row the layer is in on the tree (0 is the first row)
     // hotkeys: [
 	// {key: "p", description: "P: Reset for prestige points", onPress(){if (canReset(this.layer)) doReset(this.layer)}},
@@ -41,8 +85,12 @@ addLayer("t", {
             direction: RIGHT,
     	    width: 400,
     	    height: 50,
-    	    progress() { return player.t.points.div(formatWhole(player.t.level.pow(1.7).plus(4))) },
-			display() { return formatWhole(player.t.points)+" XP / "+formatWhole(player.t.level.pow(1.7).plus(4))+" XP [Level "+formatWhole(player.t.level)+"]"},
+    	    progress() { 
+				return player.t.points.div(player.t.xpreq) 
+			},
+			display() { 
+				return formatWhole(player.t.points)+" XP / "+format(player.t.xpreq)+" XP [Level "+formatWhole(player.t.level)+"]"
+			},
 			baseStyle: {"background-color": "#9c0000"},
 			fillStyle: {"background-color": "#009c00"},
 		},
@@ -51,7 +99,7 @@ addLayer("t", {
 		11: {
 			title() { return "Pointy Tokens ["+formatWhole(getBuyableAmount(this.layer, this.id))+"]" },
 			cost(x) { return new Decimal(5).times(new Decimal(1).plus(x)).times(new Decimal(1.12).pow(x)) },
-			display() { return "Cost: "+format(this.cost())+" points\n+100% more points per token collection\nDouble effect every 25 levels\nCurrently: "+format(this.effect())+"x" },
+			display() { return "Cost: "+format(this.cost())+" points\n+100% more points per token collection\nDouble effect every 25 buyable levels\nCurrently: "+format(this.effect())+"x" },
 			canAfford() { return player.points.gte(this.cost()) },
 			buy() {
 				player.points = player.points.sub(this.cost())
@@ -98,6 +146,45 @@ addLayer("t", {
 			effect() { return getBuyableAmount(this.layer, this.id).plus(1) },
 			tooltip: "100*(1+x)*(1.12^x)"
 		},
+		22: {
+			title() { return "Automated Tokens ["+formatWhole(getBuyableAmount(this.layer, this.id))+"/3]" },
+			cost(x) { return new Decimal(100).times(new Decimal(10).pow(x)) },
+			display() { return "Cost: "+format(this.cost())+" points\n+1 auto-collect amount\nCurrently: +"+format(this.effect()) },
+			canAfford() { return player.points.gte(this.cost()) },
+			buy() {
+				player.points = player.points.sub(this.cost())
+				setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+			},
+			effect(x) { return x },
+			tooltip: "100*(10^x)",
+			purchaseLimit: 3,
+		},
+		23: {
+			title() { return "Auto-Speedy Tokens ["+formatWhole(getBuyableAmount(this.layer, this.id))+"/3]" },
+			cost(x) { return new Decimal(1000).times(new Decimal(10).pow(x)) },
+			display() { return "Cost: "+format(this.cost())+" points\n-1s auto-collect time\nCurrently: -"+format(this.effect())+"s" },
+			canAfford() { return player.points.gte(this.cost()) },
+			buy() {
+				player.points = player.points.sub(this.cost())
+				setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+			},
+			effect(x) { return x },
+			tooltip: "1000*(10^x)",
+			purchaseLimit: 3,
+		},
+		31: {
+			title() { return "Token Bokens ["+formatWhole(getBuyableAmount(this.layer, this.id))+"]" },
+			cost(x) { return new Decimal("1e21").times(new Decimal(1).plus(x)).times(new Decimal(1.12).pow(x)) },
+			display() { return "Cost: "+format(this.cost())+" points\n+50%  more bokens\nCurrently: "+format(this.effect())+"x" },
+			canAfford() { return player.points.gte(this.cost()) },
+			buy() {
+				player.points = player.points.sub(this.cost())
+				setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+			},
+			effect(x) { return x.div(2).plus(1) },
+			tooltip: "1e21*(1+x)*(1.12^x)",
+			unlocked() { return hasUpgrade("b",13) }
+		},
 	},
 	calculatethings() {
 		//Cooldown.
@@ -110,180 +197,46 @@ addLayer("t", {
 		let life = new Decimal(6)
 		if(getBuyableAmount("t", 13).gte(1)) life = life.plus(buyableEffect("t", 13))
 		player.t.lifetime = life
+		// ACAMT. (Auto Collect Amount)
+		let acamt = new Decimal(0)
+		if(getBuyableAmount("t", 22).gte(1)) acamt = acamt.plus(buyableEffect("t", 22))
+		if(hasUpgrade("tm", 12)) acamt = acamt.plus(2)
+		player.t.acamt = acamt
+		// STARTACCD. (Start Auto Collect Cool Down)
+		let startaccd = new Decimal(4)
+		if(getBuyableAmount("t", 23).gte(1)) startaccd = startaccd.sub(buyableEffect("t", 23))
+		if(hasUpgrade("tm", 11)) startaccd = startaccd.sub(0.2)
+		if(player.t.overclockedeff.gt(0)) startaccd = startaccd.div(2)
+		player.t.startaccd = startaccd
+		// LEVEL BOOST.
+		let lb = player.t.level.root(2)
+		if(hasUpgrade("tm", 13)) lb = player.t.level
+		player.t.levelboost = lb
 	},
 	update(diff) {
+		//auto-collect
+		if(options.autoCollect){
+			if(player.t.accd.lte(0)){
+				if(player.t.acamt.gte(1)){
+					player.t.accd = player.t.startaccd
+					//Now collect thee token
+					Object.filter = (obj, predicate) => Object.fromEntries(Object.entries(obj).filter(predicate))
+					let filtered = Object.filter(particles, ([id, data]) => data.isToken)
+
+					let times = player.t.acamt.min(Object.keys(filtered).length)
+					for(let i = 0; i < times; i++){
+						collectRandom()
+					}
+				}
+			} else {
+				player.t.accd = player.t.accd.sub(diff)
+			}
+		}
 		// Tokens Spawn
 		if(player.t.cooldown.lte(0)){
 			player.t.cooldown = player.t.startcd
 			if(player.tab=="t"){
-				//get ability Tokens
-				let abtokensequip = []
-				for (at in player.a.grid) {
-					if(player.a.grid[at] != 0) {
-						abtokensequip.push(tokenId(player.a.grid[at]))
-					}
-				}
-				// basic or ability token
-				if(Math.round(Math.random())==0 && abtokensequip.length >= 1) {
-					tokentype = abtokensequip[Math.floor(Math.random() * abtokensequip.length)]
-				} else {
-					tokentype = "Basic"
-				}
-				// golden token
-				if(Math.floor(Math.random()*10)+1 == 10 && hasUpgrade("gt", 11)) {
-				//if(true) {
-					tokentype = "Golden"
-				}
-				//xenon token spawn
-				if(player.t.xenonspawn){
-					tokentype = tokenId(player.t.xenontype)
-					player.t.xenonspawn = false
-					player.t.cooldown = player.t.xenoncd
-				}
-				let token = {
-					thing: tokentype,
-					image: "resources/"+tokentype+".png",
-					time: player.t.lifetime,
-					fadeOutTime: 1,
-					layer: "t",
-					width: 50,
-					height: 50,
-					gravity() {
-						if(tokentype=="Gravity") {
-							return 0.5
-						} else {
-							return 0
-						}
-					},
-					rotation() {
-						if(tokentype=="Mysterious"){
-							return 15
-						} else {
-							return 0
-						}
-					},
-					hp() {
-						if(tokentype=="Durable") {
-							return 5
-						} else {
-							return 1
-						}
-					}, //custom
-					update() {
-						//shake
-						if(particles[this.id].thing=="Speedy"){
-							particles[this.id].xVel = (Math.random() - 0.5) * 5
-							particles[this.id].yVel = (Math.random() - 0.5) * 5
-						}
-						//out of bounds = DIE
-						if(particles[this.id].y>tmp.other.screenHeight) Vue.delete(particles, this.id)
-					},
-					onClick() {
-						let parti = particles[this.id]
-						let id = this.id
-						function real() {
-							//Point multiplier
-							pointmult = new Decimal(1)
-							if(getBuyableAmount("t", 11).gte(1)) pointmult = pointmult.times(buyableEffect("t", 11))
-							if(hasUpgrade("gt", 13)) pointmult = pointmult.times(2)
-							//Effects
-							if(player.t.tripletokeneff.gt(0)) pointmult = pointmult.times(3)
-							if(player.t.mysteriouseff.gt(0)) pointmult = pointmult.times(player.t.mysteriouseffmult)
-							//XP multiplier
-							xpmult = new Decimal(1)
-							if(getBuyableAmount("t", 21).gte(1)) xpmult = xpmult.times(buyableEffect("t", 21))
-							if(hasUpgrade("gt", 13)) xpmult = xpmult.times(2)
-							//Effects
-							if(player.t.triplexpeff.gt(0)) xpmult = xpmult.times(3)
-							//Ability Token mults
-							if(parti.thing=="Gravity" || parti.thing=="Durable" || parti.thing=="Collector" || parti.thing=="Speedy" || parti.thing=="Xenon" || parti.thing=="Mysterious") {
-								pointmult = pointmult.times(2)
-								xpmult = xpmult.times(2)
-							}
-							//add
-							player.points = player.points.plus(pointmult)
-							player.t.points = player.t.points.plus(xpmult)
-							//Token Effect Applier
-							if(parti.thing=="Golden") {
-								if(Math.round(Math.random())==0) {
-									player.t.tripletokeneff = new Decimal(15)
-								} else {
-									player.t.triplexpeff = new Decimal(15)
-								}
-							}
-							if(parti.thing=="Speedy") player.t.accelerationeff = new Decimal(1)
-							if(parti.thing=="Mysterious"){
-								player.t.mysteriouseff = new Decimal(format(Math.random() * 4)).plus(1)
-								player.t.mysteriouseffmult = new Decimal(format(Math.random() * 2)).plus(1)
-							}
-							//Xenon Token Spawn
-							if(parti.thing=="Xenon") {
-								//get unlocked abtokens
-								let xenonunlock = []
-								player.a.upgrades.forEach(function(item,index){
-									xenonunlock.push(tmp.a.upgrades[item].cid)
-								})
-								//now we get a random one and spawn that (resets cooldown)
-								player.t.xenontype = xenonunlock[Math.floor(Math.random() * xenonunlock.length)]
-								player.t.xenonspawn = true
-								player.t.xenoncd = player.t.cooldown
-								player.t.cooldown = new Decimal(0)
-							}
-							//Collector Token collect
-							if(parti.thing=="Collector"){
-								let times = Math.min(2, Object.keys(particles).length-1)
-								//WAIT, are there only Collectors on the field?
-								let x = false
-								for(p in particles){
-									if(particles[p].thing!="Collector") x = true
-								}
-								if(!x) times = 0
-								for(let i = 0; i < times; i++){
-									//select random token then click it manually
-									let randomProperty = function (obj) {
-										let keys = Object.keys(obj)
-										return obj[keys[ keys.length * Math.random() << 0]]
-									}
-									let selected = randomProperty(particles)
-									//explosion effect
-									if(id!=selected.id && selected.thing!="Collector"){
-										let explode = {
-											image:"resources/genericParticle.png",											
-											time: 1,											
-											fadeOutTime: 1,
-											speed: 0,											
-											offset: 0,
-											width: 10,
-											height: 10,
-											x: selected.x,
-											y: selected.y,
-											update() {
-												particles[this.id].width += 20
-												particles[this.id].height += 20
-											}
-										}
-										makeParticles(explode, 1)
-										run(selected.onClick, selected)
-									} else {
-										i--
-										continue
-									}
-								}
-							}
-						}
-						// custom hp
-						if(particles[this.id].hp >= 2) {
-							particles[this.id].hp--
-							particles[this.id].width -= 2
-							particles[this.id].height -= 2
-						} else {
-							real()
-							player.ach.points = player.ach.points.plus(1)
-							Vue.delete(particles, this.id)
-						}
-					},
-				}
-				makeShinies(token)
+				tokenSpawn()
 			}
 		} else {
 			player.t.cooldown = player.t.cooldown.sub(diff)
@@ -293,26 +246,48 @@ addLayer("t", {
 		if(player.t.triplexpeff.gt(0)) player.t.triplexpeff = player.t.triplexpeff.sub(diff)
 		if(player.t.accelerationeff.gt(0)) player.t.accelerationeff = player.t.accelerationeff.sub(diff)
 		if(player.t.mysteriouseff.gt(0)) player.t.mysteriouseff = player.t.mysteriouseff.sub(diff)
+		if(player.t.overclockedeff.gt(0)) player.t.overclockedeff = player.t.overclockedeff.sub(diff)
 	},
 	automate() {
 		// check the level
-		xpreq = formatWhole(player.t.level.pow(1.7).plus(4))
-		if(player.t.points.gte(xpreq)){
-			player.t.points = player.t.points.sub(xpreq)
-			player.t.level = player.t.level.plus(1)
+		//xp requirement
+		if(player.t.level.gte(1000)){
+			player.t.xpreq = new Decimal(125000).times(new Decimal(1.1).pow(player.t.level.sub(999)))
+		} else {
+			player.t.xpreq = player.t.level.pow(1.7).plus(4)
 		}
+		if(player.t.points.gte(player.t.xpreq)){
+			player.t.points = player.t.points.sub(player.t.xpreq)
+			player.t.level = player.t.level.plus(1)
+			player.t.levelstreak = player.t.levelstreak.plus(1)
+			player.t.lstimer = 1
+			//update highest level Streak
+			if(player.t.levelstreak.gt(player.t.hls)) player.t.hls = player.t.levelstreak
+		}
+		// if 1 tick pass and does not level up, we RESET!!
+		if(player.t.lstimer>0){
+			player.t.lstimer -= 1
+		} else {
+			player.t.levelstreak = new Decimal(0)
+		}
+		//Automating buyables
+		if (hasMilestone("d",0) && player.t.autobuybuyable) autobuyBuyables("t")
+		//we shall filter
+		partTokens = Object.filter(particles, thing => thing.isToken == true)
 	},
 	componentStyles: {
 		"buyable"() {return {"height": "100px"}}
 	},
     tabFormat: [
         ["bar", "levelBar"],
+		["display-text", function() {return "Your level is multiplying points by "+format(player.t.levelboost)+"x"}],
 		"blank",
         "main-display",
         "resource-display",
 		["display-text", function(){return "A token will spawn in "+format(player.t.cooldown)+" seconds."}],
 		["display-text", function(){return "Tokens have a lifetime of "+format(player.t.lifetime)+" seconds"}],
 		["display-text", function(){return "Tokens have a starting cooldown of "+format(player.t.startcd)+" seconds"}],
+		["display-text", function(){return "Auto-Collecting "+formatWhole(player.t.acamt)+" Tokens every "+format(player.t.startaccd)+" seconds"}],
 		"blank",
 		"buyables",
 		"blank",
@@ -322,15 +297,18 @@ addLayer("t", {
 			["effect", ["resources/triplexpeff.png", function() {return "x3 XP ["+formatTime(player.t.triplexpeff)+"]"}, function(){return player.t.triplexpeff.gt(0) ? "block" : "none"}]],
 			["effect", ["resources/accelerationeff.png", function() {return "/2 Token Cooldown ["+formatTime(player.t.accelerationeff)+"]"}, function(){return player.t.accelerationeff.gt(0) ? "block" : "none"}]],
 			["effect", ["resources/mysteriouseff.png", function() {return "x"+format(player.t.mysteriouseffmult)+" Points ["+formatTime(player.t.mysteriouseff)+"]"}, function(){return player.t.mysteriouseff.gt(0) ? "block" : "none"}]],
+			["effect", ["resources/overclockedeff.png", function() {return "/2 Auto-Collect Time ["+formatTime(player.t.overclockedeff)+"]"}, function(){return player.t.overclockedeff.gt(0) ? "block" : "none"}]],
 		]],
     ],
 	branches: ["a", "gt"],
     layerShown(){return true}
-	// Level Formula: (x^1.7)+4
+	// Level Formula: (x^1.7)+4 or 
 	// Pointy Tokens Formula: 5*(1+x)*(1.12^x)
 	// Speedy Tokens Formula: 50*(1+x)*(1.5^x)
 	// Longer Tokens Formula: 100*(1+x)*(1.5^x)
 	// Proficient Tokens Formula: 100*(1+x)*(1.12^x)
+	// Level Boost Formula: x square root
+	// Automated Tokens Formula: 1000*(2^x)
 }),
 addLayer("a", {
     name: "ability tokens", // This is optional, only used in a few places, If absent it just uses the layer id.
@@ -341,7 +319,7 @@ addLayer("a", {
 		points: new Decimal(0),
     }},
     color: "#036bfc",
-    requires: new Decimal(12), // Can be a function that takes requirement increases into account
+    requires: new Decimal(10), // Can be a function that takes requirement increases into account
     resource: "", // Name of prestige currency
     baseResource: "level", // Name of resource prestige is based on
     baseAmount() {return player.t.level}, // Get the current amount of baseResource
@@ -363,14 +341,15 @@ addLayer("a", {
 		unlocks: {
 			title: "Unlocks",
 			body() {
-				return "Next Unlock: Level 50 [Unlocks more Ability Tokens]"
+				return `Next Unlock: Level 50 [Unlocks more Ability Tokens]
+				`
 			}
 		}
 	},
 	upgrades: {
 		11: {
 			title: "Gravity Token",
-			description: "Unlock an ability token that has gravity physics. 2x XP and Points when collected.",
+			description: "Unlock an ability token that has gravity physics. 3x XP and Points when collected.",
 			currencyDisplayName: "points",
 			currencyInternalName: "points",
 			cost: new Decimal(200),
@@ -387,7 +366,7 @@ addLayer("a", {
 		},
 		13: {
 			title: "Xenon Token",
-			description: "Spawns a random ability token that you unlocked. 2x XP and Points when collected",
+			description: "Spawns a random ability token that you unlocked. 1x XP and Points when collected",
 			currencyDisplayName: "points",
 			currencyInternalName: "points",
 			cost: new Decimal(10000),
@@ -396,7 +375,7 @@ addLayer("a", {
 		},
 		21: {
 			title: "Durable Token",
-			description: "Unlock an ability token that you need to click 5 times to claim. 2x XP and Points when collected.",
+			description: "Unlock an ability token that you need to click 5 times to claim. 5x XP and Points when collected.",
 			currencyDisplayName: "points",
 			currencyInternalName: "points",
 			cost: new Decimal(200),
@@ -421,6 +400,25 @@ addLayer("a", {
 			unlocked() {return player.t.level.gte(50)},
 			tooltip: "[Mysterious]: x(1-3) points for (1-5) seconds",
 			cid: 6,
+		},
+		14: {
+			title: "Bomb Token",
+			description: "Splits into two inactive bomb tokens. 2x XP and Points when collected.",
+			currencyDisplayName: "points",
+			currencyInternalName: "points",
+			cost: new Decimal("1e9"),
+			unlocked() {return player.t.level.gte(500)},
+			cid: 7,
+		},
+		24: {
+			title: "Robot Token",
+			description: "Gives the [Overclocked] effect when collected. 2x XP and Points when collected.",
+			currencyDisplayName: "points",
+			currencyInternalName: "points",
+			cost: new Decimal("1e9"),
+			unlocked() {return player.t.level.gte(500)},
+			tooltip: "[Overclocked]: /2 auto-collect time for 3 seconds",
+			cid: 8,
 		},
 	},
 	grid: { // Ruh Roh time for Ability Token Equipping.
@@ -469,12 +467,18 @@ addLayer("a", {
 				case 6:
 					return {"background-color": "#ff38e8"}
 					break
+				case 7:
+					return {"background-color": "#660004"}
+					break
+				case 8:
+					return {"background-color": "#C9C9C9"}
+					break
 				default:
 					return {"background-color": "#ffffff"}
 			}
 		},
 		onClick(data, id) { 
-			if(data >= 6){
+			if(data >= 8){
 				player.a.grid[id] = 0
 			} else {
 				let gravity = hasUpgrade("a", 11)
@@ -483,6 +487,8 @@ addLayer("a", {
 				let speedy = hasUpgrade("a", 22)
 				let xenon = hasUpgrade("a", 13)
 				let mysterious = hasUpgrade("a", 23)
+				let bomb = hasUpgrade("a", 14)
+				let robot = hasUpgrade("a", 24)
 				for (at in player.a.grid) {
 					let x = player.a.grid[at]
 					if(x==1) gravity = false
@@ -491,6 +497,8 @@ addLayer("a", {
 					if(x==4) speedy = false
 					if(x==5) xenon = false
 					if(x==6) mysterious = false
+					if(x==7) bomb = false
+					if(x==8) robot = false
 				}
 				player.a.grid[id]++
 				if(player.a.grid[id]==1 && !gravity) player.a.grid[id]++
@@ -498,15 +506,21 @@ addLayer("a", {
 				if(player.a.grid[id]==3 && !collector) player.a.grid[id]++
 				if(player.a.grid[id]==4 && !speedy) player.a.grid[id]++
 				if(player.a.grid[id]==5 && !xenon) player.a.grid[id]++
-				if(player.a.grid[id]==6 && !mysterious) player.a.grid[id] = 0
+				if(player.a.grid[id]==6 && !mysterious) player.a.grid[id]++
+				if(player.a.grid[id]==7 && !bomb) player.a.grid[id]++
+				if(player.a.grid[id]==8 && !robot) player.a.grid[id] = 0
 			}
 		},
 	},
 	automate() {
-		if(player.t.level.gte(12)){
+		if(player.t.level.gte(10)){
 			player.a.unlocked = true
 		} else {
-			player.a.unlocked = false
+			if(player.d.points.gte(3)){
+				player.a.unlocked = true
+			} else {
+				player.a.unlocked = false
+			}
 		}
 	},
 	tabFormat: [
@@ -539,6 +553,11 @@ addLayer("gt", {
     exponent: 0.5, // Prestige currency exponent
     gainMult() { // Calculate the multiplier for main currency from bonuses
         mult = new Decimal(1)
+		if(hasMilestone("d",0)) mult=mult.times(2)
+		if(hasMilestone("d",5)) mult=mult.times(2)
+		if(hasMilestone("d",6)) mult=mult.times(player.d.points.sub(6).div(10).plus(1).max(1))
+		if(hasMilestone("d",7)) mult=mult.times(5)
+		if(getBuyableAmount("b", 22).gte(1)) mult = mult.times(buyableEffect("b", 22))
         return mult
     },
     gainExp() { // Calculate the exponent on main currency from bonuses
@@ -563,5 +582,56 @@ addLayer("gt", {
 			cost: new Decimal(5),
 		},
 	},
+	buyables: {
+		11: {
+			title() { return "Gilded Points ["+formatWhole(getBuyableAmount(this.layer, this.id))+"/"+this.purchaseLimit()+"]" },
+			cost(x) { return new Decimal(10).times(new Decimal(1).plus(new Decimal(0.2).times(x))).times(new Decimal(1.12).pow(x)).floor() },
+			display() { return "Cost: "+format(this.cost())+" golden tokens\n+50% more points per token collection\nCurrently: "+format(this.effect())+"x" },
+			canAfford() { return player.gt.points.gte(this.cost()) },
+			buy() {
+				player.gt.points = player.gt.points.sub(this.cost())
+				setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+			},
+			effect(x) { return x.div(2).plus(1) },
+			tooltip: "10*(1+0.2x)*(1.12^x)",
+			purchaseLimit(){
+				if(hasUpgrade("tm", 14)) return 500
+				return 50
+			},
+		},
+		12: {
+			title() { return "Gilded XP ["+formatWhole(getBuyableAmount(this.layer, this.id))+"/"+this.purchaseLimit()+"]" },
+			cost(x) { return new Decimal(15).times(new Decimal(1).plus(new Decimal(0.2).times(x))).times(new Decimal(1.12).pow(x)).floor() },
+			display() { return "Cost: "+format(this.cost())+" golden tokens\n+50% more XP per token collection\nCurrently: "+format(this.effect())+"x" },
+			canAfford() { return player.gt.points.gte(this.cost()) },
+			buy() {
+				player.gt.points = player.gt.points.sub(this.cost())
+				setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+			},
+			effect(x) { return x.div(2).plus(1) },
+			tooltip: "15*(1+0.2x)*(1.12^x)",
+			purchaseLimit(){
+				if(hasUpgrade("tm", 14)) return 500
+				return 50
+			},
+		},
+		13: {
+			title() { return "Gilded Bokens ["+formatWhole(getBuyableAmount(this.layer, this.id))+"]" },
+			cost(x) { return new Decimal("1e14").times(new Decimal(1).plus(new Decimal(0.2).times(x))).times(new Decimal(1.12).pow(x)).floor() },
+			display() { return "Cost: "+format(this.cost())+" golden tokens\n+50% more bokens\nCurrently: "+format(this.effect())+"x" },
+			canAfford() { return player.gt.points.gte(this.cost()) },
+			buy() {
+				player.gt.points = player.gt.points.sub(this.cost())
+				setBuyableAmount(this.layer, this.id, getBuyableAmount(this.layer, this.id).add(1))
+			},
+			effect(x) { return x.div(2).plus(1) },
+			tooltip: "1e14*(1+0.2x)*(1.12^x)",
+			unlocked() {return hasUpgrade("b",13)},
+		},
+	},
+	componentStyles: {
+		"buyable"() {return {"height": "100px"}}
+	},
+	branches: ["d","tm","b"],
     layerShown(){return true}
 })

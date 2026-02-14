@@ -15,9 +15,18 @@ function getStartOptions() {
 		oldStyle: false,
 		forceTooltips: true,
 		hideMilestonePopups: false,
+		tokenCap: 100,
+		autoCollect: true,
+		fixbg: false,
 	}
 }
-
+function fixbgtest(){
+	toggleOpt("fixbg")
+	setTimeout(function(){
+		let backgroundAudio=document.getElementById("qwertyasdfgh")
+		backgroundAudio.volume=0.001
+	},1)
+}
 function toggleOpt(name) {
 	if (name == "oldStyle" && styleCooldown > 0)
 		return;
@@ -51,9 +60,16 @@ const MS_DISPLAYS = ["ALL", "LAST, AUTO, INCOMPLETE", "AUTOMATION, INCOMPLETE", 
 
 const MS_SETTINGS = ["always", "last", "automation", "incomplete", "never"];
 
+const TK_DISPLAYS = [100, 200, 25, 50];
+
 function adjustMSDisp() {
 	options.msDisplay = MS_SETTINGS[(MS_SETTINGS.indexOf(options.msDisplay) + 1) % 5];
 }
+
+function adjustTKDisp() {
+	options.tokenCap = TK_DISPLAYS[(TK_DISPLAYS.indexOf(options.tokenCap) + 1) % 4];
+}
+
 function milestoneShown(layer, id) {
 	complete = player[layer].milestones.includes(id);
 	auto = layers[layer].milestones[id].toggles;
